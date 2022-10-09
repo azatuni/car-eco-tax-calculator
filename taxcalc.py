@@ -1,4 +1,5 @@
 import datetime
+import argparse
 
 
 class CarEcoTax:
@@ -40,10 +41,12 @@ class CarEcoTax:
 
     def __init__(self, production_year, horse_powers, debug=False):
         # Allow use tow digit numbers if car is newer than 2000 year
-        if len(str(production_year)) == 2:
-            production_year += 2000
+        if len(str(production_year)) <= 2:
+            self.production_year = production_year + 2000
+        else:
+            self.production_year = production_year
         current_year = datetime.datetime.today().year
-        age = current_year - production_year
+        age = current_year - self.production_year
         # Calculate car tax age
         if age > 8:
             self.car_tax_age = 8
@@ -58,6 +61,9 @@ class CarEcoTax:
         self.debug = debug
         if debug:
             print(f"Car tax age: {self.car_tax_age}")
+
+    def __str__(self):
+        return f"Car horsepowers are: {self.horse_powers}, tax age: {self.car_tax_age}"
 
     def __calc_parser(self, data):
         return self.horse_powers * (data["for_three_years"] +
@@ -79,12 +85,29 @@ class CarEcoTax:
         elif self.horse_powers in range(250, 301):
             return self.__calc_parser(self.tax_per_horse_power["from_251_to_300"])
         elif self.horse_powers > 300:
-            print(f"Car have a more then 301 horse powers: {self.horse_powers}")
+            if self.debug:
+                print(f"Car have a more then 301 horse powers: {self.horse_powers}")
             return self.__calc_parser(self.tax_per_horse_power["more_then_300"])
 
 
 if __name__ == '__main__':
-    car_age = 2018
-    car_horse_powers = 310
-    tax = CarEcoTax(car_age, car_horse_powers, True)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--horsepowers","-p",
+                        type=int,
+                        nargs=1,
+                        help="Horse powers of machine")
+    parser.add_argument("--prod-year", "-y",
+                        type=int,
+                        nargs=1,
+                        help="Year of producton")
+    parser.add_argument("--debug",
+                        action='store_true',
+                        dest='debug',
+                        default=False,
+                        help="turn on debug mode")
+    args = parser.parse_args()
+    car_age = args.prod_year[0]
+    car_horse_powers = args.horsepowers[0]
+    debug_mode = args.debug
+    tax = CarEcoTax(car_age, car_horse_powers, debug_mode)
     print(tax.calculate())
