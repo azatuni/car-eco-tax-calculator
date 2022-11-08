@@ -1,6 +1,9 @@
 import unittest
 import datetime
+import sys
+sys.path.append('..')
 from taxcalc import CarEcoTax
+from taxcalc import CarEcoTaxInputError
 
 
 class CatEcoTaxTest(unittest.TestCase):
@@ -47,6 +50,53 @@ class CatEcoTaxTest(unittest.TestCase):
         self.assertEqual(testcase, expected, f"Eco tax for {two_years_before} "
                                              f"and {horse_powers} horsepower's should be {expected}")
 
+    def test_next_year_input_exception(self):
+        one_year_after = datetime.datetime.today().year + 2
+        horse_powers = 350
+        with self.assertRaises(CarEcoTaxInputError, msg=f"Prod year is {one_year_after}"):
+            CarEcoTax(one_year_after, horse_powers).calculate()
+
+    def test_three_letters_year_input_exception(self):
+        one_year_after = 198
+        horse_powers = 350
+        with self.assertRaises(CarEcoTaxInputError, msg=f"Prod year could not be 3 digits"):
+            CarEcoTax(one_year_after, horse_powers).calculate()
+
+    def test_year_not_int_input(self):
+        prod_year = "random_string"
+        horse_powers = 350
+        with self.assertRaises(CarEcoTaxInputError, msg=f"Prod year should be integer"):
+            CarEcoTax(prod_year, horse_powers).calculate()
+
+    def test_horse_power_not_int_input(self):
+        prod_year = 1980
+        horse_powers = "random_string"
+        with self.assertRaises(CarEcoTaxInputError, msg=f"Horse powers should be integer"):
+            CarEcoTax(prod_year, horse_powers).calculate()
+
+    def test_horse_power_not_zero(self):
+        prod_year = 1980
+        horse_powers = 0
+        with self.assertRaises(CarEcoTaxInputError, msg=f"Horse powers should be greater then 0"):
+            CarEcoTax(prod_year, horse_powers).calculate()
+
+    def test_horse_power_not_negative(self):
+        prod_year = 1980
+        horse_powers = -1
+        with self.assertRaises(CarEcoTaxInputError, msg=f"Horse powers should be greater then 0"):
+            CarEcoTax(prod_year, horse_powers).calculate()
+
+    def test_year_not_zero(self):
+        prod_year = 0
+        horse_powers = 300
+        with self.assertRaises(CarEcoTaxInputError, msg=f"Prod year should be greater then 0"):
+            CarEcoTax(prod_year, horse_powers).calculate()
+
+    def test_year_not_negative(self):
+        prod_year = -1
+        horse_powers = 300
+        with self.assertRaises(CarEcoTaxInputError, msg=f"Prod year should be greater then 0"):
+            CarEcoTax(prod_year, horse_powers).calculate()
 
 
 if __name__ == '__main__':

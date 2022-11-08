@@ -1,8 +1,16 @@
 import datetime
 import argparse
+import sys
+import logging
+
+
+class CarEcoTaxInputError(Exception):
+    """Exception for wrong production year"""
+    pass
 
 
 class CarEcoTax:
+    """Class for car eco tax calculation"""
     tax_per_horse_power = {
         "from_0_to_50": {
             "for_three_years": 2.5,
@@ -39,13 +47,29 @@ class CarEcoTax:
 
     }
 
-    def __init__(self, production_year, horse_powers, debug=False):
+    def __init__(self, production_year: int, horse_powers: int, log=False):
+        # Verify production_year and horse_powers are integers and greater then 0
+        if not isinstance(production_year, int) or production_year <= 0:
+            raise CarEcoTaxInputError(f"Production year should be integer and greater then 0")
+        if not isinstance(horse_powers, int) or horse_powers <= 0:
+            raise CarEcoTaxInputError(f"Horse powers should be integer and greater then 0")
+        # Configure log
+        if log:
+            logging.basicConfig(level=logging.DEBUG,
+                                format='%(asctime)s - %(levelname)s - %(message)s',
+                                datefmt='%d-%b-%y %H:%M:%S')
         # Allow use tow digit numbers if car is newer than 2000 year
         if len(str(production_year)) <= 2:
             self.production_year = production_year + 2000
+        elif len(str(production_year)) != 4:
+            raise CarEcoTaxInputError(f"{production_year} wrong production year")
         else:
             self.production_year = production_year
         current_year = datetime.datetime.today().year
+        # Raise exception if enter year is greater than current one
+        if production_year > current_year:
+            raise CarEcoTaxInputError(f"Production year could not "
+                                         f"be greater than current")
         age = current_year - self.production_year
         # Calculate car tax age
         if age > 8:
@@ -58,14 +82,12 @@ class CarEcoTax:
         else:
             self.car_tax_age = age
         self.horse_powers = horse_powers
-        self.debug = debug
-        if debug:
-            print(f"Car tax age: {self.car_tax_age}")
+        logging.debug(f"Car tax age: {self.car_tax_age}")
 
     def __str__(self):
-        return f"Car horsepowers are: {self.horse_powers}, tax age: {self.car_tax_age}"
+        return f"Car horse powers are: {self.horse_powers}, tax age: {self.car_tax_age}"
 
-    def __calc_parser(self, data):
+    def __calc_parser(self, data: dict):
         return self.horse_powers * (data["for_three_years"] +
                                     ((self.car_tax_age - 3) * (data["per_additional_year"])))
 
@@ -85,21 +107,22 @@ class CarEcoTax:
         elif self.horse_powers in range(250, 301):
             return self.__calc_parser(self.tax_per_horse_power["from_251_to_300"])
         elif self.horse_powers > 300:
-            if self.debug:
-                print(f"Car have a more then 301 horse powers: {self.horse_powers}")
+            logging.debug(f"Car have a more then 301 horse powers: {self.horse_powers}")
             return self.__calc_parser(self.tax_per_horse_power["more_then_300"])
 
 
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--horsepowers","-p",
                         type=int,
                         nargs=1,
+                        required=True,
                         help="Horse powers of machine")
     parser.add_argument("--prod-year", "-y",
                         type=int,
                         nargs=1,
-                        help="Year of producton")
+                        required=True,
+                        help="Year of production")
     parser.add_argument("--debug",
                         action='store_true',
                         dest='debug',
@@ -108,6 +131,16 @@ if __name__ == '__main__':
     args = parser.parse_args()
     car_age = args.prod_year[0]
     car_horse_powers = args.horsepowers[0]
-    debug_mode = args.debug
-    tax = CarEcoTax(car_age, car_horse_powers, debug_mode)
-    print(tax.calculate())
+    debug = args.debug
+
+    try:
+        tax = CarEcoTax(car_age, car_horse_powers, debug)
+        print(tax.calculate())
+        sys.exit(0)
+    except CarEcoTaxInputError as prod_year_error:
+        print(prod_year_error)
+        sys.exit(1)
+
+
+if __name__ == '__main__':
+    main()
