@@ -57,12 +57,21 @@ class CatEcoTaxTest(unittest.TestCase):
                         f"and {horse_powers} horsepower's should be {expected}"
         self.assertEqual(testcase, expected, error_message)
 
-    def test_next_year_input_exception(self):
-        one_year_after = datetime.datetime.today().year + 2
+    def test_next_year_four_digit_input_exception(self):
+        next_year = datetime.datetime.today().year + 1
+        prod_year = next_year
         horse_powers = 350
-        error_message = f"Prod year is {one_year_after}"
+        error_message = f"Prod year could not be next year: {next_year}"
         with self.assertRaises(CarEcoTaxProdYearError, msg=error_message):
-            CarEcoTax(one_year_after, horse_powers).calculate()
+            CarEcoTax(next_year, horse_powers).calculate()
+
+    def test_next_year_two_digit_input_exception(self):
+        next_year = datetime.datetime.today().year + 1
+        prod_year = int(str(next_year)[-2:])
+        horse_powers = 350
+        error_message = f"Prod year could not be next year: {prod_year}"
+        with self.assertRaises(CarEcoTaxProdYearError, msg=error_message):
+            CarEcoTax(prod_year, horse_powers).calculate()
 
     def test_three_letters_year_input_exception(self):
         one_year_after = 198
@@ -112,6 +121,9 @@ class CatEcoTaxTest(unittest.TestCase):
         error_message = "Prod year should be greater then 0"
         with self.assertRaises(CarEcoTaxProdYearError, msg=error_message):
             CarEcoTax(prod_year, horse_powers).calculate()
+
+    # add test case for two year future year
+
 
 
 if __name__ == '__main__':

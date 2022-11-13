@@ -81,7 +81,7 @@ class CarEcoTax:
             self.production_year = production_year
         current_year = datetime.datetime.today().year
         # Raise exception if enter year is greater than current one
-        if production_year > current_year:
+        if self.production_year > current_year:
             raise CarEcoTaxProdYearError("Production year could not "
                                          "be greater than current")
         age = current_year - self.production_year
