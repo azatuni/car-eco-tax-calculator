@@ -17,19 +17,13 @@ class TelegramBotApiError(Exception):
 
 class TelegramBot:
     """Telegram Bot main class"""
-    horse_powers_keyboard = [["1 - 50"],
-                             ["51 - 80"],
-                             ["81 - 100"],
-                             ["101 - 150"],
-                             ["151 - 200"],
-                             ["201 - 250"],
-                             ["251 - 300"],
-                             ["301 ավել"]]
+    start_keyboard = [["/start"]]
+    horse_powers_keyboard = [["156"], ["234"]]
     prod_year_keyboard = [[str(datetime.datetime.today().year - year)]
                           for year in range(8)]
     prod_year_keyboard.append([f"մինչև {prod_year_keyboard[-1][0]}"])
-    prod_year_pattern = re.compile(r"(մինչև\s)?([0-9]{2,4})")
-    horse_powers_pattern = re.compile(r"([0-9]*)(\s\-\s|\s)?([0-9]{1,3}|ավել)?")
+    # Regex pattern for horse powers and production year
+    regex_pattern = re.compile(r"(մինչև\s)?([0-9]{2,4})")
     offset = 0
     updates = []
     chat_ids = []
@@ -115,36 +109,42 @@ class TelegramBot:
         logging.info(f"chat_history: {self.chat_history}")
         self.updates = []
 
+    def cleanup_old_chats(self):
+        print(self.chat_history)
+        cleanup_indexes = []
+        for chat_id_index, chat_id in enumerate(self.chat_ids):
+            prod_year = self.chat_history[chat_id]["prod_year"]
+            horse_power = self.chat_history[chat_id]["horse_powers"]
+            replied = self.chat_history[chat_id]["processed"]
+            if prod_year is not None and horse_power is not None and replied:
+                del self.chat_history[chat_id]
+                logging.info(f"removed {chat_id} processed chat from queue")
+                cleanup_indexes.append(chat_id_index)
+        if cleanup_indexes:
+            for index in cleanup_indexes:
+                del self.chat_ids[index]
+
     def extract_prod_year(self) -> bool:
         """Try to get prod year from message and set it as self.prod_year"""
-        if self.prod_year_pattern.findall(self.message):
+        if self.regex_pattern.findall(self.message):
             self.chat_history[self.chat_id]["prod_year"] = \
-                int(self.prod_year_pattern.findall(self.message)[0][1])
-
-            #self.prod_year = int(self.prod_year_pattern.findall(self.message)[0][1])
+                int(self.regex_pattern.findall(self.message)[0][1])
             return True
-            # return int(self.prod_year_pattern.findall(self.message)[0][1])
-        else:
-            return False
-            # return None
+        return False
 
     def extract_horse_powers(self) -> bool:
-        if self.horse_powers_pattern.findall(self.message):
+        if self.regex_pattern.findall(self.message):
             self.chat_history[self.chat_id]["horse_powers"] = \
-                int(self.horse_powers_pattern.findall(self.message)[0][0])
-            #print(self.horse_powers_pattern.findall(self.message)[0][0])
-            # self.horse_powers = int(self.horse_powers_pattern.findall(self.message)[0][0])
-            # return int(self.horse_powers_pattern.findall(self.message)[0][0])
+                int(self.regex_pattern.findall(self.message)[0][1])
             return True
         else:
             return False
-            # return None
 
-    def prod_year_response_helper(self):
+    def prod_year_response_helper(self) -> None:
         self.keyboard = self.prod_year_keyboard
         self.reply_text = "մուտքագրեք մեքենայի արտադրման տարեթիվը"
 
-    def hourse_powers_response_helper(self):
+    def horse_powers_response_helper(self) -> None:
         self.keyboard = self.horse_powers_keyboard
         self.reply_text = "մուտքագրեք մեքենայի շարժիչի ձիաուժերի քանակը"
 
@@ -178,25 +178,23 @@ class TelegramBot:
                 print(self.chat_history)
                 continue
             elif self.prod_year is None and self.extract_prod_year():
-                #self.chat_history[chat_id]["prod_year"] = self.prod_year
-                self.hourse_powers_response_helper()
-                #self.set_get_year_response()
-                #self.keyboard = self.prod_year_keyboard
+                self.horse_powers_response_helper()
                 self.send_message()
                 print(self.chat_history)
                 continue
             elif self.horse_powers is None and not self.extract_horse_powers():
-                self.hourse_powers_response_helper()
+                self.horse_powers_response_helper()
                 self.send_message()
                 print(self.chat_history)
                 continue
             elif self.prod_year is not None and self.horse_powers is not None:
                 try:
                     tax = CarEcoTax(self.prod_year, self.horse_powers).calculate()
-                    self.reply_text = f"Վճարման ենթակա բնապահպանության "\
-                                      f"հարկը կազմում է` {tax} ֏"
+                    self.reply_text = f"Վճարման ենթակա բնապահպանության հարկը " \
+                                      f"կազմում է` {tax} ֏"
                     self.keyboard = None
-                    logging.info(f"Calculate {tax} tax for {self.prod_year} year and {self.horse_powers} hp")
+                    logging.info(f"Calculate {tax} tax for {self.prod_year} year "
+                                 f"and {self.horse_powers} hp")
                 except CarEcoTaxProdYearError as year_error:
                     logging.info(f"")
                     self.reply_text = f"մուտքագրված արտադրման տարեթիվը սխալ է"
@@ -206,7 +204,7 @@ class TelegramBot:
                     self.chat_history[chat_id]["horse_powers"] = None
                 self.send_message()
                 continue
-
+        self.cleanup_old_chats()
 
     def run(self):
         try:
