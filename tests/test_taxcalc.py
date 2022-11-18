@@ -61,9 +61,9 @@ class CatEcoTaxTest(unittest.TestCase):
         next_year = datetime.datetime.today().year + 1
         prod_year = next_year
         horse_powers = 350
-        error_message = f"Prod year could not be next year: {next_year}"
+        error_message = f"Prod year could not be next year: {prod_year}"
         with self.assertRaises(CarEcoTaxProdYearError, msg=error_message):
-            CarEcoTax(next_year, horse_powers).calculate()
+            CarEcoTax(prod_year, horse_powers).calculate()
 
     def test_next_year_two_digit_input_exception(self):
         next_year = datetime.datetime.today().year + 1
@@ -121,9 +121,6 @@ class CatEcoTaxTest(unittest.TestCase):
         error_message = "Prod year should be greater then 0"
         with self.assertRaises(CarEcoTaxProdYearError, msg=error_message):
             CarEcoTax(prod_year, horse_powers).calculate()
-
-    # add test case for two year future year
-
 
 
 if __name__ == '__main__':
