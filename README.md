@@ -5,3 +5,4 @@ car-eco-tax-calculator is a collection of python scripts for calculate car's [Ar
 `taxcalc.py` can be used as a CLI tool for calculation.
 ## Prerequisites
 - python3.8 or later version
+- `pip3 install -r requirements.txt` if you are going to use `telegram_bot.py`
