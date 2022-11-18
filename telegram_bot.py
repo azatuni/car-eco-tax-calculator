@@ -128,21 +128,13 @@ class TelegramBot:
             for index in cleanup_indexes:
                 del self.chat_ids[index]
 
-    def extract_prod_year(self) -> bool:
-        """Try to get prod year from message and set it as self.prod_year"""
+    def extract_from_message(self, field) -> bool:
+        """Try to extract from message horse_powers of prod_year"""
         if self.regex_pattern.findall(self.message):
-            self.chat_history[self.chat_id]["prod_year"] = \
+            self.chat_history[self.chat_id][field] = \
                 int(self.regex_pattern.findall(self.message)[0][1])
             return True
         return False
-
-    def extract_horse_powers(self) -> bool:
-        if self.regex_pattern.findall(self.message):
-            self.chat_history[self.chat_id]["horse_powers"] = \
-                int(self.regex_pattern.findall(self.message)[0][1])
-            return True
-        else:
-            return False
 
     def prod_year_response_helper(self) -> None:
         """Method for set prod year keyboard and reply_text"""
@@ -173,20 +165,23 @@ class TelegramBot:
                 if self.send_message():
                     logging.info(f"Replied to message: {self.reply_id}")
                 continue
-            elif self.prod_year is None and not self.extract_prod_year():
+            elif self.prod_year is None and \
+                    not self.extract_from_message("prod_year"):
                 self.prod_year_response_helper()
                 if self.send_message():
                     logging.info(f"Replied to message: {self.reply_id}")
                 continue
-            elif self.prod_year is None and self.extract_prod_year():
+            elif self.prod_year is None and \
+                    self.extract_from_message("prod_year"):
                 self.horse_powers_response_helper()
                 self.send_message()
                 continue
-            elif self.horse_powers is None and not self.extract_horse_powers():
+            elif self.horse_powers is None and \
+                    not self.extract_from_message("horse_powers"):
                 self.horse_powers_response_helper()
                 self.send_message()
                 continue
-            elif self.prod_year is not None and self.horse_powers is not None:
+            elif self.prod_year and self.horse_powers:
                 try:
                     tax = CarEcoTax(self.prod_year,
                                     self.horse_powers).calculate()
@@ -243,6 +238,7 @@ def main():
         logging.error("TELEGRAM_BOT_TOKEN env var not set. Cannot get token")
         sys.exit(1)
     bot = TelegramBot(token)
+    logging.info("Starting Telegram Bot...")
     while True:
         time.sleep(1)
         bot.run()
