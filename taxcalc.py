@@ -133,9 +133,10 @@ class CarEcoTax:
             tax_data = self.tax_per_hp["more_then_300"]
             logging.debug(f"Car have a more then 301 horse powers: "
                           f"{self.horse_powers}")
-        self.tax = self.horse_powers * (tax_data["for_three_years"] +
-                                        ((self.car_tax_age - 3) *
-                                         (tax_data["per_additional_year"])))
+        self.tax = self.horse_powers * (tax_data["for_three_years"]
+                                        + ((self.car_tax_age - 3)
+                                           * (tax_data["per_additional_year"]))
+                                        )
         return self.try_convert_to_int()
 
 

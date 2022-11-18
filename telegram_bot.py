@@ -28,13 +28,14 @@ class TelegramBot:
     updates = []
     chat_ids = []
     chat_history = {}
+    url, payload, keyboard, reply_text = None, None, None, None
 
     def __init__(self, token):
         api_url = f"https://api.telegram.org/bot{token}/"
         self.api_send_message_url = f"{api_url}sendMessage"
         self.api_get_updates_url = f"{api_url}getUpdates"
 
-    def __request(self):
+    def __request(self) -> dict:
         """Make a http call and return result object if it was successful"""
         headers = {
             "accept": "application/json",
@@ -42,14 +43,17 @@ class TelegramBot:
             "content-type": "application/json"
         }
 
-        response = requests.post(self.url, json=self.payload, headers=headers).json()
+        response = requests.post(self.url,
+                                 json=self.payload,
+                                 headers=headers).json()
         logging.debug(f"Payload: {self.payload}")
         logging.debug(f"Response: {response}")
         if not response["ok"]:
-            raise TelegramBotApiError(f"Telegram API response not ok: {response}")
+            raise TelegramBotApiError(f"Telegram API response "
+                                      f"not ok: {response}")
         return response["result"]
 
-    def get_updates(self):
+    def get_updates(self) -> None:
         """Get Updates from telegram"""
         self.url = self.api_get_updates_url
         logging.debug(f"url: {self.url}")
@@ -84,11 +88,12 @@ class TelegramBot:
             self.chat_history[self.chat_id]["processed"] = True
             return True
         except TelegramBotApiError as api_error:
-            logging.error(f"Failed sent message {self.reply_text} to {self.chat_id} chat id, "
-                          f"error{api_error}")
+            logging.error(f"Failed sent message {self.reply_text} to "
+                          f"{self.chat_id} chat id, error{api_error}")
             return False
 
-    def add_updates_to_queue(self):
+    def add_updates_to_queue(self) -> None:
+        """Add updates to chat_ids and chat_history"""
         for update in self.updates:
             chat_id = update["message"]["chat"]["id"]
             message_id = update["message"]["message_id"]
@@ -110,7 +115,6 @@ class TelegramBot:
         self.updates = []
 
     def cleanup_old_chats(self):
-        print(self.chat_history)
         cleanup_indexes = []
         for chat_id_index, chat_id in enumerate(self.chat_ids):
             prod_year = self.chat_history[chat_id]["prod_year"]
@@ -141,6 +145,7 @@ class TelegramBot:
             return False
 
     def prod_year_response_helper(self) -> None:
+        """Method for set prod year keyboard and reply_text"""
         self.keyboard = self.prod_year_keyboard
         self.reply_text = "մուտքագրեք մեքենայի արտադրման տարեթիվը"
 
@@ -149,7 +154,7 @@ class TelegramBot:
         self.reply_text = "մուտքագրեք մեքենայի շարժիչի ձիաուժերի քանակը"
 
     def process_chat(self):
-        # ToDo: Refactor this class, add queue cleaner
+        """Process chat message"""
         for chat_id in self.chat_ids:
             self.chat_id = chat_id
             self.message = self.chat_history[chat_id]["last_message"]
@@ -161,52 +166,49 @@ class TelegramBot:
             if self.replied:
                 continue
             if self.message == "/start":
-                # reply_text = "մուտքագրեք մեքենայի արտադրման տարեթիվը"
-                # self.keyboard = self.prod_year_keyboard
                 self.prod_year_response_helper()
                 # Reset counters
                 self.chat_history[chat_id]["prod_year"] = None
                 self.chat_history[chat_id]["horse_powers"] = None
                 if self.send_message():
                     logging.info(f"Replied to message: {self.reply_id}")
-                print(self.chat_history)
                 continue
             elif self.prod_year is None and not self.extract_prod_year():
                 self.prod_year_response_helper()
                 if self.send_message():
                     logging.info(f"Replied to message: {self.reply_id}")
-                print(self.chat_history)
                 continue
             elif self.prod_year is None and self.extract_prod_year():
                 self.horse_powers_response_helper()
                 self.send_message()
-                print(self.chat_history)
                 continue
             elif self.horse_powers is None and not self.extract_horse_powers():
                 self.horse_powers_response_helper()
                 self.send_message()
-                print(self.chat_history)
                 continue
             elif self.prod_year is not None and self.horse_powers is not None:
                 try:
-                    tax = CarEcoTax(self.prod_year, self.horse_powers).calculate()
-                    self.reply_text = f"Վճարման ենթակա բնապահպանության հարկը " \
-                                      f"կազմում է` {tax} ֏"
+                    tax = CarEcoTax(self.prod_year,
+                                    self.horse_powers).calculate()
+                    self.reply_text = f"Վճարման ենթակա բնապահպանության " \
+                                      f"հարկը կազմում է` {tax} ֏"
                     self.keyboard = None
-                    logging.info(f"Calculate {tax} tax for {self.prod_year} year "
-                                 f"and {self.horse_powers} hp")
+                    logging.info(f"Calculate {tax} tax for {self.prod_year} "
+                                 f"year and {self.horse_powers} hp")
                 except CarEcoTaxProdYearError as year_error:
-                    logging.info(f"")
-                    self.reply_text = f"մուտքագրված արտադրման տարեթիվը սխալ է"
+                    logging.info(f"{year_error}")
+                    self.reply_text = f"մուտքագրված արտադրման " \
+                                      f"տարեթիվը {self.prod_year} սխալ է"
                     self.chat_history[chat_id]["prod_year"] = None
                 except CarEcoTaxHorsePowerError as hp_error:
-                    self.reply_text = f"մուտքագրված ձիաուժը սխալ է"
+                    self.reply_text = f"մուտքագրված {hp_error} ձիաուժը սխալ է"
                     self.chat_history[chat_id]["horse_powers"] = None
                 self.send_message()
                 continue
         self.cleanup_old_chats()
 
-    def run(self):
+    def run(self) -> None:
+        """Primary method for running bot"""
         try:
             self.get_updates()
         except TelegramBotApiError as bot_api_error:
@@ -238,7 +240,7 @@ def main():
     try:
         token = os.environ['TELEGRAM_BOT_TOKEN']
     except KeyError:
-        logging.error(f"TELEGRAM_BOT_TOKEN env var not set cannot get token")
+        logging.error("TELEGRAM_BOT_TOKEN env var not set. Cannot get token")
         sys.exit(1)
     bot = TelegramBot(token)
     while True:
