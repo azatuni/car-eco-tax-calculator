@@ -1,4 +1,6 @@
 # Car eco tax calculator
+![ci](https://github.com/azatuni/car-eco-tax-calculator/actions/workflows/ci.yml/badge.svg)
+
 car-eco-tax-calculator is a collection of python scripts for calculate car's [Armenian Ecological tax.](https://www.petekamutner.am/Content.aspx?itn=tsTINatureProtectionPayments)
 
 `telegram_bot.py` can be used for telegram bot. Actually [AutoEcoTaxCalculatorBot](https://t.me/AutoEcoTaxCalculatorBot) telegram bot is using it.
